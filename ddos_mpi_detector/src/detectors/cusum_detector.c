@@ -209,6 +209,33 @@ WindowResult merge_detector_results(const WindowResult *entropy_result,
     merged.flow_count = ref->flow_count;
     merged.ground_truth = ref->ground_truth;
     
+    /* Copy timing information - use the maximum processing time from all detectors */
+    double max_processing_time = 0.0;
+    if (entropy_result && entropy_result->processing_time_ms > max_processing_time) {
+        max_processing_time = entropy_result->processing_time_ms;
+    }
+    if (pca_result && pca_result->processing_time_ms > max_processing_time) {
+        max_processing_time = pca_result->processing_time_ms;
+    }
+    if (cusum_result && cusum_result->processing_time_ms > max_processing_time) {
+        max_processing_time = cusum_result->processing_time_ms;
+    }
+    merged.processing_time_ms = max_processing_time;
+    
+    /* Copy feature values from each detector */
+    if (entropy_result) {
+        merged.norm_entropy_src_ip = entropy_result->norm_entropy_src_ip;
+        merged.norm_entropy_dst_ip = entropy_result->norm_entropy_dst_ip;
+    }
+    if (pca_result) {
+        merged.pca_spe = pca_result->pca_spe;
+        merged.pca_t2 = pca_result->pca_t2;
+    }
+    if (cusum_result) {
+        merged.cusum_positive = cusum_result->cusum_positive;
+        merged.cusum_negative = cusum_result->cusum_negative;
+    }
+    
     /* Merge predictions (majority voting) */
     int vote_count = 0;
     int attack_votes = 0;

@@ -91,6 +91,35 @@ typedef struct {
     double avg_window_time;
     long total_flows_processed;
     double throughput_flows_per_sec;
+    
+    /* Extended Performance Metrics */
+    double detection_lead_time_ms;      /* Time from first attack to first detection */
+    double min_window_time_ms;          /* Minimum processing time */
+    double max_window_time_ms;          /* Maximum processing time */
+    double percentile_95_latency_ms;    /* 95th percentile latency */
+    double avg_packet_processing_us;    /* Average time per packet in microseconds */
+    
+    /* Throughput Metrics */
+    long total_packets_processed;       /* Total packet count */
+    double throughput_packets_per_sec;  /* Packets/second */
+    double throughput_mbps;             /* Megabits per second */
+    double throughput_gbps;             /* Gigabits per second */
+    
+    /* Resource Utilization (estimated) */
+    double avg_cpu_utilization;         /* Estimated CPU usage percentage */
+    long peak_memory_bytes;             /* Peak memory usage */
+    double avg_memory_mb;               /* Average memory in MB */
+    
+    /* Mitigation Effectiveness */
+    int total_ips_detected;             /* Total suspicious IPs found */
+    int total_ips_blocked;              /* Total IPs actually blocked */
+    double attack_traffic_blocked_pct;  /* % of attack traffic blocked */
+    double false_positive_impact_pct;   /* % of benign traffic affected */
+    
+    /* Scalability Metrics */
+    int mpi_processes_used;             /* Number of MPI processes */
+    double parallel_efficiency;         /* Speedup / #processes */
+    double load_balance_factor;         /* Work distribution evenness */
 } PerformanceMetrics;
 
 /* Utility macros */
