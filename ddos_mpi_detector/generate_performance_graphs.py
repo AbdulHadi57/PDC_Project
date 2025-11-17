@@ -373,13 +373,22 @@ def main():
     
     results_file = sys.argv[1]
     
+    # Normalize the path to resolve any './' or '../' components
+    results_file = os.path.abspath(results_file)
+    
     if not os.path.exists(results_file):
         print(f"Error: File '{results_file}' not found")
         sys.exit(1)
     
     # Create output directory
     output_dir = os.path.join(os.path.dirname(results_file), 'performance_graphs')
-    os.makedirs(output_dir, exist_ok=True)
+    
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+    except PermissionError as e:
+        print(f"Error: Permission denied creating directory '{output_dir}'")
+        print(f"Please check directory permissions or run with sudo")
+        sys.exit(1)
     
     print("\n" + "="*60)
     print("Performance Graph Generator for DDoS Detection System")
