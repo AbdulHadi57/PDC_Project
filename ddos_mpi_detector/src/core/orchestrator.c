@@ -907,26 +907,39 @@ int master_coordinate_dataset_analysis(const OrchestratorConfig *config, const M
         printf("\n");
         print_colored(COLOR_CYAN, "═══ Generating Performance Graphs ═══\n");
     
+        /* Convert to absolute path for results file */
+        char abs_results_file[MAX_PATH_LENGTH];
+        if (results_file[0] != '/') {
+            char cwd[MAX_PATH_LENGTH];
+            if (getcwd(cwd, sizeof(cwd)) != NULL) {
+                snprintf(abs_results_file, sizeof(abs_results_file), "%s/%s", cwd, results_file);
+            } else {
+                strncpy(abs_results_file, results_file, MAX_PATH_LENGTH - 1);
+            }
+        } else {
+            strncpy(abs_results_file, results_file, MAX_PATH_LENGTH - 1);
+        }
+    
         char graph_cmd[MAX_PATH_LENGTH * 2];
         char script_path[MAX_PATH_LENGTH];
     
-    /* Get the directory where the executable is located */
-    char exe_path[MAX_PATH_LENGTH];
-    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-    if (len != -1) {
-        exe_path[len] = '\0';
-        char *exe_dir = dirname(exe_path);
-        /* Script is in parent directory of bin/ */
-        snprintf(script_path, sizeof(script_path), "%s/../generate_performance_graphs.py", exe_dir);
-    } else {
-        /* Fallback: assume script is in current directory or project root */
-        snprintf(script_path, sizeof(script_path), "./generate_performance_graphs.py");
-    }
+        /* Get the directory where the executable is located */
+        char exe_path[MAX_PATH_LENGTH];
+        ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+        if (len != -1) {
+            exe_path[len] = '\0';
+            char *exe_dir = dirname(exe_path);
+            /* Script is in parent directory of bin/ */
+            snprintf(script_path, sizeof(script_path), "%s/../generate_performance_graphs.py", exe_dir);
+        } else {
+            /* Fallback: assume script is in current directory or project root */
+            snprintf(script_path, sizeof(script_path), "./generate_performance_graphs.py");
+        }
     
         /* Build command: python3 script.py results_file */
-        snprintf(graph_cmd, sizeof(graph_cmd), "python3 %s %s 2>&1", script_path, results_file);
+        snprintf(graph_cmd, sizeof(graph_cmd), "python3 %s %s 2>&1", script_path, abs_results_file);
         
-        printf("Running: python3 generate_performance_graphs.py %s\n", results_file);
+        printf("Running: python3 generate_performance_graphs.py %s\n", abs_results_file);
         
         int graph_ret = system(graph_cmd);
         if (graph_ret == 0) {
