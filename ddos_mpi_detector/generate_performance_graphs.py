@@ -177,11 +177,15 @@ def plot_throughput_metrics(metrics, output_dir):
     fig, ax = plt.subplots(figsize=(10, 6))
     
     categories = ['Flows/sec', 'Packets/sec\n(÷1000)', 'Mbps', 'Windows/sec\n(×10)']
+    total_time = metrics.get('total_processing_time_sec', 0)
+    total_windows = metrics.get('total_windows', 1)
+    windows_per_sec = (total_windows / total_time * 10) if total_time > 0 else 0
+    
     values = [
         metrics.get('throughput_flows_per_sec', 0),
         metrics.get('throughput_packets_per_sec', 0) / 1000,
         metrics.get('throughput_mbps', 0),
-        (metrics.get('total_windows', 1) / metrics.get('total_processing_time_sec', 1)) * 10
+        windows_per_sec
     ]
     
     colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12']

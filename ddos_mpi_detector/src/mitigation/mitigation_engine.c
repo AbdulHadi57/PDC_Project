@@ -100,6 +100,12 @@ int apply_mitigation(const SuspiciousList *list, const char *interface,
         const char *ip = list->entries[i].ip;
         int count = list->entries[i].count;
         
+        /* Skip self-IP addresses to prevent locking out the victim server */
+        if (strcmp(ip, "192.168.10.10") == 0 || strcmp(ip, "127.0.0.1") == 0) {
+            print_colored(COLOR_YELLOW, "  [!] Skipping self-IP: %s (detections: %d)\n", ip, count);
+            continue;
+        }
+        
         printf("Processing IP: %s%s%s (detections: %d)\n", 
                COLOR_RED, ip, COLOR_RESET, count);
         
