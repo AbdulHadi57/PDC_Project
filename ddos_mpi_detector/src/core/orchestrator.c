@@ -75,6 +75,9 @@ int interactive_menu(OrchestratorConfig *config) {
     
     switch (choice) {
         case 0:
+            printf("\033[2J\033[H");
+            fflush(stdout);
+            print_colored(COLOR_CYAN, "\nThank you for using DDoS Detection System. Goodbye!\n\n");
             return 1; /* Exit code */
             
         case 1:
