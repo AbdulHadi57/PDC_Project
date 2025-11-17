@@ -561,10 +561,14 @@ int orchestrator_init(int argc, char **argv, OrchestratorConfig *config, MPICont
     int parse_result = 0;
     if (mpi_ctx->is_master) {
         parse_result = parse_command_line(argc, argv, config);
-        if (parse_result != 0) {
-            MPI_Finalize();
-            return parse_result;
-        }
+    }
+    
+    /* Broadcast parse result to all ranks so they can exit together */
+    MPI_Bcast(&parse_result, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    if (parse_result != 0) {
+        MPI_Finalize();
+        return parse_result;
     }
     
     /* Broadcast configuration to all ranks */
