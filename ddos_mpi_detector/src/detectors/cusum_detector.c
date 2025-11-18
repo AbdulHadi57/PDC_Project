@@ -105,8 +105,8 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
     if (!cusum->is_initialized) {
         for (int i = 0; i < cusum->n_features; i++) {
             cusum->baseline_mean[i] = features[i];
-            /* Set std to 10% of initial value or minimum 1.0 */
-            cusum->baseline_std[i] = MAX(fabs(features[i]) * 0.1, 1.0);
+            /* Set std to 50% of initial value or minimum 10.0 for network traffic variance */
+            cusum->baseline_std[i] = MAX(fabs(features[i]) * 0.5, 10.0);
         }
         cusum->baseline_count = 1;
         cusum->is_initialized = true;
@@ -116,8 +116,8 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
         result.cusum_positive = 0.0;
         result.cusum_negative = 0.0;
     } else {
-        /* Update baseline (exponential moving average) */
-        double alpha = 0.1;  /* Smoothing factor */
+        /* Update baseline slowly (don't adapt to attacks) */
+        double alpha = 0.02;  /* Much slower smoothing - 98% weight on history */
         for (int i = 0; i < cusum->n_features; i++) {
             cusum->baseline_mean[i] = alpha * features[i] + 
                                       (1.0 - alpha) * cusum->baseline_mean[i];

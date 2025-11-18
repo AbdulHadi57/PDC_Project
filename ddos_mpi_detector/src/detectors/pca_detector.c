@@ -124,10 +124,10 @@ WindowResult pca_detect_window(PCADetector *pca, const FlowWindow *window, doubl
                 pca->mean[i] /= pca->warmup_target;
             }
             
-            /* Calculate standard deviations - need second pass */
-            /* For now, use simple heuristic: 10% of mean or minimum 1.0 */
+            /* Calculate standard deviations - use larger values for real traffic variance */
+            /* Network traffic has high natural variance - use 50% of mean as std, minimum 10.0 */
             for (int i = 0; i < pca->n_features; i++) {
-                pca->std[i] = MAX(fabs(pca->mean[i]) * 0.1, 1.0);
+                pca->std[i] = MAX(fabs(pca->mean[i]) * 0.5, 10.0);
             }
             
             pca->is_trained = true;
