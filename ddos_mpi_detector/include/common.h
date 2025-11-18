@@ -30,9 +30,9 @@
 #define TAG_TERMINATE 999
 
 /* Detection thresholds */
-#define DEFAULT_ENTROPY_THRESHOLD 0.20  /* Lowered for DrDoS/reflection attacks */
-#define DEFAULT_PCA_THRESHOLD 2.5       /* Normalized deviation threshold */
-#define DEFAULT_CUSUM_THRESHOLD 3.0     /* Cumulative sum threshold */
+#define DEFAULT_ENTROPY_THRESHOLD 0.35  /* Balanced for attack detection with low FP */
+#define DEFAULT_PCA_THRESHOLD 3.5       /* Normalized deviation threshold */
+#define DEFAULT_CUSUM_THRESHOLD 4.5     /* Cumulative sum threshold */
 #define DEFAULT_WINDOW_SIZE 500
 #define DEFAULT_MIN_IP_COUNT 5
 
