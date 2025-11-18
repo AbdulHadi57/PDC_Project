@@ -29,10 +29,10 @@
 #define TAG_RESULT_DATA 201
 #define TAG_TERMINATE 999
 
-/* Detection thresholds */
-#define DEFAULT_ENTROPY_THRESHOLD 0.35  /* Balanced for attack detection with low FP */
-#define DEFAULT_PCA_THRESHOLD 3.5       /* Normalized deviation threshold */
-#define DEFAULT_CUSUM_THRESHOLD 4.5     /* Cumulative sum threshold */
+/* Detection thresholds - Tuned to minimize false positives on normal traffic */
+#define DEFAULT_ENTROPY_THRESHOLD 0.50  /* High threshold: only severe entropy drops trigger */
+#define DEFAULT_PCA_THRESHOLD 5.0       /* High threshold: 5 std deviations from normal */
+#define DEFAULT_CUSUM_THRESHOLD 6.0     /* High threshold: significant cumulative deviation */
 #define DEFAULT_WINDOW_SIZE 500
 #define DEFAULT_MIN_IP_COUNT 5
 

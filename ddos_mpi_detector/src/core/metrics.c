@@ -108,18 +108,13 @@ void calculate_performance_metrics(const WindowResult *results, int num_windows,
     metrics->throughput_gbps = 0.0;
     metrics->avg_packet_processing_us = 0.0;
     
-    /* Calculate CPU utilization based on processing time vs wall-clock time */
-    /* CPU% = (processing_time / (wall_time * num_cores)) * 100 */
-    if (metrics->total_processing_time > 0 && metrics->mpi_processes_used > 1) {
-        /* Assume each worker process uses ~1 core when active */
-        int worker_count = metrics->mpi_processes_used - 1;  /* Exclude master */
-        double ideal_parallel_time = metrics->total_processing_time / worker_count;
-        metrics->avg_cpu_utilization = (ideal_parallel_time / metrics->total_processing_time) * 100.0;
-        /* Cap at 100% */
-        if (metrics->avg_cpu_utilization > 100.0) metrics->avg_cpu_utilization = 100.0;
-    } else {
-        metrics->avg_cpu_utilization = 85.0;  /* Default estimate */
-    }
+    /* Calculate CPU utilization: sum of all worker processing times / wall-clock time */
+    /* This will be recalculated properly after total_processing_time is set to wall-clock */
+    /* For now, use cumulative processing time as an approximation */
+    double cumulative_worker_time = total_time;  /* Sum of all window processing times */
+    
+    /* Placeholder - will be updated in orchestrator with actual wall-clock time */
+    metrics->avg_cpu_utilization = 0.0;  /* Will be calculated later */
     
     /* Calculate actual memory usage */
     /* Each flow: ~400 bytes (5 IPs + ports + proto + times + label) */
@@ -283,12 +278,19 @@ void print_performance_summary(const PerformanceMetrics *metrics) {
     
     /* Detection Quality Summary */
     print_colored(COLOR_YELLOW, "═══ Detection Quality Summary ═══\n");
+    
+    /* Calculate false alarm percentage of total benign windows */
+    int total_benign = metrics->false_positives + metrics->true_negatives;
+    double fp_percentage = (total_benign > 0) ? (double)metrics->false_positives / total_benign * 100.0 : 0.0;
+    
     if (metrics->false_positives == 0) {
-        print_colored(COLOR_GREEN, "  ✓ No false alarms - Excellent specificity\n");
-    } else if (metrics->false_positives < metrics->true_positives / 10) {
-        print_colored(COLOR_GREEN, "  ✓ Very low false alarm rate\n");
+        print_colored(COLOR_GREEN, "  ✓ No false alarms - Perfect specificity\n");
+    } else if (fp_percentage < 5.0) {
+        print_colored(COLOR_GREEN, "  ✓ Very low false alarm rate (%.1f%% of benign flagged)\n", fp_percentage);
+    } else if (fp_percentage < 20.0) {
+        print_colored(COLOR_YELLOW, "  ⚠ Moderate false alarm rate (%.1f%% of benign flagged)\n", fp_percentage);
     } else {
-        print_colored(COLOR_YELLOW, "  ! Consider threshold adjustment to reduce false alarms\n");
+        print_colored(COLOR_RED, "  ✗ High false alarm rate (%.1f%% of benign flagged) - Increase thresholds!\n", fp_percentage);
     }
     
     if (metrics->false_negatives == 0) {
