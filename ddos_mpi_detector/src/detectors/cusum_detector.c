@@ -10,7 +10,7 @@ int cusum_detect_init(CUSUMDetector *cusum, double threshold, double drift) {
     
     memset(cusum, 0, sizeof(CUSUMDetector));
     cusum->threshold = (threshold > 0) ? threshold : 5.0;
-    cusum->drift = (drift > 0) ? drift : 0.5;
+    cusum->drift = (drift > 0) ? drift : 1.5;  /* Increased drift to reduce false triggers */
     cusum->current_sum_positive = 0.0;
     cusum->current_sum_negative = 0.0;
     cusum->n_features = 4;  /* Key features for CUSUM */
@@ -111,6 +111,25 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
         cusum->baseline_count = 1;
         cusum->is_initialized = true;
         
+        /* First window: no detection, just baseline establishment */
+        result.cusum_prediction = 0;
+        result.cusum_anomaly_score = 0.0;
+        result.cusum_positive = 0.0;
+        result.cusum_negative = 0.0;
+    } else if (cusum->baseline_count < 5) {
+        /* Warmup phase: accumulate baseline statistics for first 5 windows */
+        double alpha = 0.3;  /* Faster learning during warmup */
+        for (int i = 0; i < cusum->n_features; i++) {
+            cusum->baseline_mean[i] = alpha * features[i] + 
+                                      (1.0 - alpha) * cusum->baseline_mean[i];
+            double deviation = fabs(features[i] - cusum->baseline_mean[i]);
+            cusum->baseline_std[i] = alpha * deviation + 
+                                    (1.0 - alpha) * cusum->baseline_std[i];
+            cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 10.0);
+        }
+        cusum->baseline_count++;
+        
+        /* During warmup: no detection */
         result.cusum_prediction = 0;
         result.cusum_anomaly_score = 0.0;
         result.cusum_positive = 0.0;
@@ -121,6 +140,13 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
         for (int i = 0; i < cusum->n_features; i++) {
             cusum->baseline_mean[i] = alpha * features[i] + 
                                       (1.0 - alpha) * cusum->baseline_mean[i];
+            
+            /* Update std adaptively based on recent deviations */
+            double deviation = fabs(features[i] - cusum->baseline_mean[i]);
+            cusum->baseline_std[i] = alpha * deviation + 
+                                    (1.0 - alpha) * cusum->baseline_std[i];
+            /* Ensure minimum std to avoid division by tiny numbers */
+            cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 10.0);
         }
         
         /* Calculate CUSUM statistics with numerical stability */
