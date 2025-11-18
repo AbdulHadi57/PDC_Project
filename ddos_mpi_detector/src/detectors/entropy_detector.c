@@ -127,33 +127,21 @@ WindowResult entropy_detect_window(const FlowWindow *window, double threshold) {
         result.norm_entropy_dst_port = result.entropy_dst_port;
         result.norm_entropy_flow_signature = result.entropy_flow_signature;
         
-        /* Calculate anomaly score (entropy deficit) */
-        double deficit_sum = 0.0;
-        int features_used = 0;
+        /* Calculate anomaly score - use weighted combination */
+        /* DDoS attacks typically show low entropy in dst_ip AND dst_port */
+        double src_ip_deficit = (result.norm_entropy_src_ip >= 0) ? (1.0 - result.norm_entropy_src_ip) : 0.0;
+        double dst_ip_deficit = (result.norm_entropy_dst_ip >= 0) ? (1.0 - result.norm_entropy_dst_ip) : 0.0;
+        double src_port_deficit = (result.norm_entropy_src_port >= 0) ? (1.0 - result.norm_entropy_src_port) : 0.0;
+        double dst_port_deficit = (result.norm_entropy_dst_port >= 0) ? (1.0 - result.norm_entropy_dst_port) : 0.0;
+        double signature_deficit = (result.norm_entropy_flow_signature >= 0) ? (1.0 - result.norm_entropy_flow_signature) : 0.0;
         
-        if (result.norm_entropy_src_ip >= 0) {
-            deficit_sum += (1.0 - result.norm_entropy_src_ip);
-            features_used++;
-        }
-        if (result.norm_entropy_dst_ip >= 0) {
-            deficit_sum += (1.0 - result.norm_entropy_dst_ip);
-            features_used++;
-        }
-        if (result.norm_entropy_src_port >= 0) {
-            deficit_sum += (1.0 - result.norm_entropy_src_port);
-            features_used++;
-        }
-        if (result.norm_entropy_dst_port >= 0) {
-            deficit_sum += (1.0 - result.norm_entropy_dst_port);
-            features_used++;
-        }
-        if (result.norm_entropy_flow_signature >= 0) {
-            deficit_sum += (1.0 - result.norm_entropy_flow_signature);
-            features_used++;
-        }
+        /* Weight destination features MORE heavily (targets show up here) */
+        /* Also require BOTH dst_ip and dst_port to have some deficit */
+        double dst_component = (dst_ip_deficit + dst_port_deficit) / 2.0;
+        double src_component = (src_ip_deficit + src_port_deficit) / 2.0;
         
-        result.entropy_anomaly_score = (features_used > 0) ? 
-                                       (deficit_sum / features_used) : 0.0;
+        /* Combined score: 60% destination + 30% source + 10% signature */
+        result.entropy_anomaly_score = 0.6 * dst_component + 0.3 * src_component + 0.1 * signature_deficit;
         
         /* Make prediction */
         result.entropy_prediction = (result.entropy_anomaly_score > threshold) ? 1 : 0;

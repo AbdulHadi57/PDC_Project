@@ -10,7 +10,7 @@ int cusum_detect_init(CUSUMDetector *cusum, double threshold, double drift) {
     
     memset(cusum, 0, sizeof(CUSUMDetector));
     cusum->threshold = (threshold > 0) ? threshold : 5.0;
-    cusum->drift = (drift > 0) ? drift : 1.5;  /* Increased drift to reduce false triggers */
+    cusum->drift = (drift > 0) ? drift : 5.0;  /* Ultra-high drift to aggressively suppress noise */
     cusum->current_sum_positive = 0.0;
     cusum->current_sum_negative = 0.0;
     cusum->n_features = 4;  /* Key features for CUSUM */
@@ -105,8 +105,12 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
     if (!cusum->is_initialized) {
         for (int i = 0; i < cusum->n_features; i++) {
             cusum->baseline_mean[i] = features[i];
-            /* Set std to 50% of initial value or minimum 10.0 for network traffic variance */
-            cusum->baseline_std[i] = MAX(fabs(features[i]) * 0.5, 10.0);
+            /* Use VERY LARGE fixed std based on extreme network traffic variance */
+            /* Features: [avg_packet_rate, avg_byte_rate, unique_IPs, avg_syn_flags] */
+            if (i == 0) cusum->baseline_std[i] = MAX(fabs(features[i]) * 3.0, 10000.0);   /* packet rate: extreme */
+            else if (i == 1) cusum->baseline_std[i] = MAX(fabs(features[i]) * 5.0, 100000.0); /* byte rate: extreme */
+            else if (i == 2) cusum->baseline_std[i] = MAX(fabs(features[i]) * 2.0, 500.0);   /* unique IPs */
+            else cusum->baseline_std[i] = MAX(fabs(features[i]) * 3.0, 200.0);   /* SYN flags */
         }
         cusum->baseline_count = 1;
         cusum->is_initialized = true;
@@ -125,7 +129,11 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
             double deviation = fabs(features[i] - cusum->baseline_mean[i]);
             cusum->baseline_std[i] = alpha * deviation + 
                                     (1.0 - alpha) * cusum->baseline_std[i];
-            cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 10.0);
+            /* Use feature-specific minimums - extreme values */
+            if (i == 0) cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 10000.0);
+            else if (i == 1) cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 100000.0);
+            else if (i == 2) cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 500.0);
+            else cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 200.0);
         }
         cusum->baseline_count++;
         
@@ -145,8 +153,11 @@ WindowResult cusum_detect_window(CUSUMDetector *cusum, const FlowWindow *window)
             double deviation = fabs(features[i] - cusum->baseline_mean[i]);
             cusum->baseline_std[i] = alpha * deviation + 
                                     (1.0 - alpha) * cusum->baseline_std[i];
-            /* Ensure minimum std to avoid division by tiny numbers */
-            cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 10.0);
+            /* Ensure feature-specific minimum std to handle extreme variance */
+            if (i == 0) cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 10000.0);
+            else if (i == 1) cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 100000.0);
+            else if (i == 2) cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 500.0);
+            else cusum->baseline_std[i] = MAX(cusum->baseline_std[i], 200.0);
         }
         
         /* Calculate CUSUM statistics with numerical stability */

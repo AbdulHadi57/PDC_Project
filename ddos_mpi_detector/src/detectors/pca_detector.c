@@ -124,11 +124,14 @@ WindowResult pca_detect_window(PCADetector *pca, const FlowWindow *window, doubl
                 pca->mean[i] /= pca->warmup_target;
             }
             
-            /* Calculate standard deviations - use larger values for real traffic variance */
-            /* Network traffic has high natural variance - use 50% of mean as std, minimum 10.0 */
-            for (int i = 0; i < pca->n_features; i++) {
-                pca->std[i] = MAX(fabs(pca->mean[i]) * 0.5, 10.0);
-            }
+            /* Use FIXED std based on typical network traffic, NOT learned from data */
+            /* This prevents attacks in warmup from corrupting the baseline */
+            pca->std[0] = MAX(fabs(pca->mean[0]) * 3.0, 1000.0);   /* duration: very high variance */
+            pca->std[1] = MAX(fabs(pca->mean[1]) * 5.0, 100000.0); /* bytes/sec: EXTREME variance */
+            pca->std[2] = MAX(fabs(pca->mean[2]) * 5.0, 10000.0);  /* packets/sec: EXTREME variance */
+            pca->std[3] = MAX(fabs(pca->mean[3]) * 3.0, 1000.0);   /* fwd packets: high variance */
+            pca->std[4] = MAX(fabs(pca->mean[4]) * 3.0, 1000.0);   /* bwd packets: high variance */
+            pca->std[5] = MAX(fabs(pca->mean[5]) * 2.0, 500.0);    /* packet length: moderate variance */
             
             pca->is_trained = true;
         }

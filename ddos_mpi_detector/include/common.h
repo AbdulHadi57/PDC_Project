@@ -30,9 +30,9 @@
 #define TAG_TERMINATE 999
 
 /* Detection thresholds - Tuned to minimize false positives on normal traffic */
-#define DEFAULT_ENTROPY_THRESHOLD 0.50  /* High threshold: only severe entropy drops trigger */
-#define DEFAULT_PCA_THRESHOLD 5.0       /* High threshold: 5 std deviations from normal */
-#define DEFAULT_CUSUM_THRESHOLD 6.0     /* High threshold: significant cumulative deviation */
+#define DEFAULT_ENTROPY_THRESHOLD 0.45  /* Weighted dst-heavy scoring: 60% dst + 30% src + 10% sig */
+#define DEFAULT_PCA_THRESHOLD 18.0      /* Ultra-high threshold: 18 std deviations (extreme outliers only) */
+#define DEFAULT_CUSUM_THRESHOLD 20.0    /* Ultra-high threshold: 20 cumulative deviations (extreme shifts only) */
 #define DEFAULT_WINDOW_SIZE 500
 #define DEFAULT_MIN_IP_COUNT 5
 
